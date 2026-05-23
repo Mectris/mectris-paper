@@ -1,0 +1,10 @@
+config-version: 1
+
+# Mectris API base URL
+api-url: 'http://localhost:8080'
+
+# Paste your claim token here, then restart the server
+claim-token: ''
+
+# How often to send metrics to the dashboard (seconds)
+metrics-interval: 30
