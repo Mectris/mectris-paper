@@ -8,10 +8,12 @@ import com.mectris.mectrispaper.config.MectrisConfig;
 import com.mectris.mectrispaper.metrics.MetricsCollector;
 import com.mectris.mectrispaper.metrics.MetricsScheduler;
 import com.mectris.mectrispaper.storage.MectrisStorage;
+import com.mectris.mectrispaper.utils.RegisterUtils;
 import lombok.Getter;
 import revxrsal.zapper.ZapperJavaPlugin;
 
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 
 public final class Mectris extends ZapperJavaPlugin {
@@ -19,9 +21,9 @@ public final class Mectris extends ZapperJavaPlugin {
     @Getter private static Mectris instance;
     @Getter private static TaskScheduler scheduler;
 
-    private MectrisConfig mectrisConfig;
-    private MectrisStorage storage;
-    private MectrisApiClient apiClient;
+    @Getter private MectrisConfig mectrisConfig;
+    @Getter private MectrisStorage storage;
+    @Getter private MectrisApiClient apiClient;
     private MyScheduledTask metricsTask;
 
     @Override
@@ -44,30 +46,55 @@ public final class Mectris extends ZapperJavaPlugin {
             return;
         }
 
+        RegisterUtils.registerCommands();
+
         var claimToken = mectrisConfig.getClaimToken();
         if (!claimToken.isBlank()) {
             getLogger().info("Claim token detected, connecting to Mectris...");
-            runClaimAsync(claimToken);
+            claimAsync(claimToken,
+                    serverId -> getLogger().info("Connected! Server ID: " + serverId),
+                    err      -> getLogger().severe("Claim failed — check your token and api-url: " + err)
+            );
         } else {
             startIfConnected();
         }
     }
 
-    private void runClaimAsync(String claimToken) {
+    public void claimAsync(String token, Consumer<String> onSuccess, Consumer<String> onFailure) {
         scheduler.runTaskAsynchronously(() -> {
             try {
                 var installationId = UUID.randomUUID();
-                var response = apiClient.completeClaim(claimToken, installationId);
+                var response = apiClient.completeClaim(token, installationId);
 
                 storage.saveCredentials(response.apiKey(), UUID.fromString(response.serverId()), UUID.fromString(response.installationId()));
                 mectrisConfig.clearClaimToken();
 
-                getLogger().info("Connected! Server ID: " + response.serverId());
-                scheduler.runTask(() -> startMetricsTask(response.apiKey(), UUID.fromString(response.installationId())));
+                scheduler.runTask(() -> {
+                    startMetricsTask(response.apiKey(), UUID.fromString(response.installationId()));
+                    onSuccess.accept(response.serverId());
+                });
             } catch (Exception e) {
-                getLogger().log(Level.SEVERE, "Claim failed — check your token and api-url in config.yml: " + e.getMessage());
+                onFailure.accept(e.getMessage());
             }
         });
+    }
+
+    public void disconnect() throws Exception {
+        if (metricsTask != null) {
+            metricsTask.cancel();
+            metricsTask = null;
+        }
+        storage.clearCredentials();
+    }
+
+    public void reload() throws Exception {
+        if (metricsTask != null) {
+            metricsTask.cancel();
+            metricsTask = null;
+        }
+        mectrisConfig.reload();
+        apiClient = new MectrisApiClient(mectrisConfig.getApiUrl());
+        startIfConnected();
     }
 
     private void startIfConnected() {
@@ -77,7 +104,7 @@ public final class Mectris extends ZapperJavaPlugin {
                 getLogger().info("Connected. Server ID: " + creds.get().serverId());
                 startMetricsTask(creds.get().apiKey(), creds.get().installationId());
             } else {
-                getLogger().warning("Not connected — paste your claim token into config.yml and restart.");
+                getLogger().warning("Not connected — run /mectris claim <token> or paste the token into config.yml and restart.");
             }
         } catch (Exception e) {
             getLogger().log(Level.SEVERE, "Failed to load credentials", e);

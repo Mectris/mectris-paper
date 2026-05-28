@@ -42,4 +42,8 @@ public class MectrisConfig {
     public int getMetricsInterval() {
         return document.getInt("metrics-interval", 30);
     }
+
+    public void reload() throws IOException {
+        document.reload();
+    }
 }

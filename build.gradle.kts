@@ -29,8 +29,6 @@ dependencies {
     zap("io.github.revxrsal:lamp.brigadier:4.0.0-rc.12")
 
     zap("com.github.Anon8281:UniversalScheduler:0.1.6")
-    zap("com.zaxxer:HikariCP:6.2.1")
-    zap("com.h2database:h2:2.2.224")
     zap("com.google.code.gson:gson:2.11.0")
 }
 

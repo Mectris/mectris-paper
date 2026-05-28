@@ -1,0 +1,5 @@
+io.github.revxrsal:lamp.brigadier:4.0.0-rc.12
+io.github.revxrsal:lamp.common:4.0.0-rc.12
+com.github.Anon8281:UniversalScheduler:0.1.6
+com.google.code.gson:gson:2.11.0
+com.google.errorprone:error_prone_annotations:2.27.0
