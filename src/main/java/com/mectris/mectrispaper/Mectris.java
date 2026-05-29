@@ -84,6 +84,12 @@ public final class Mectris extends ZapperJavaPlugin {
             metricsTask.cancel();
             metricsTask = null;
         }
+        try {
+            var creds = storage.loadCredentials();
+            if (creds.isPresent()) {
+                apiClient.sendDisconnect(creds.get().apiKey(), creds.get().installationId());
+            }
+        } catch (Exception ignored) {}
         storage.clearCredentials();
     }
 
@@ -125,7 +131,18 @@ public final class Mectris extends ZapperJavaPlugin {
 
     @Override
     public void onDisable() {
-        if (metricsTask != null) metricsTask.cancel();
+        if (metricsTask != null) {
+            metricsTask.cancel();
+            metricsTask = null;
+        }
+        try {
+            if (storage != null && apiClient != null) {
+                var creds = storage.loadCredentials();
+                if (creds.isPresent()) {
+                    apiClient.sendDisconnect(creds.get().apiKey(), creds.get().installationId());
+                }
+            }
+        } catch (Exception ignored) {}
         if (storage != null) storage.close();
     }
 }

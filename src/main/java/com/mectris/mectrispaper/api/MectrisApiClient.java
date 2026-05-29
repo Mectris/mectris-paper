@@ -53,6 +53,17 @@ public class MectrisApiClient {
         if (response.statusCode() != 202) throw new RuntimeException("Ingest failed (HTTP " + response.statusCode() + ")");
     }
 
+    public void sendDisconnect(String apiKey, UUID installationId) throws Exception {
+        var request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl + "/api/v1/ingest/disconnect"))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("X-Installation-Id", installationId.toString())
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+
+        http.send(request, HttpResponse.BodyHandlers.discarding());
+    }
+
     private record ClaimRequest(String claimToken, String installationId) {}
     public record ClaimResponse(String apiKey, String serverId, String installationId) {}
     private record MetricsPayload(String timestamp, double tps, double mspt, int onlinePlayers, long usedMemory) {}
