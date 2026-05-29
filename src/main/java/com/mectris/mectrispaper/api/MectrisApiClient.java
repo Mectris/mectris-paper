@@ -39,8 +39,24 @@ public class MectrisApiClient {
         return GSON.fromJson(response.body(), ClaimResponse.class);
     }
 
-    public void sendMetrics(String apiKey, @NotNull UUID installationId, double tps, double mspt, int onlinePlayers, long usedMemory) throws Exception {
-        var payload = new MetricsPayload(Instant.now().toString(), tps, mspt, onlinePlayers, usedMemory);
+    public void sendMetrics(
+            String apiKey,
+            @NotNull UUID installationId,
+            double tps,
+            double mspt,
+            int onlinePlayers,
+            long usedMemory,
+            long maxMemory,
+            double cpuUsage,
+            int maxPlayers
+    ) throws Exception {
+        var payload = new MetricsPayload(
+                Instant.now().toString(),
+                tps, mspt, onlinePlayers, usedMemory,
+                cpuUsage >= 0 ? cpuUsage : null,
+                maxMemory,
+                maxPlayers
+        );
         var body = GSON.toJson(payload);
 
         var request = HttpRequest.newBuilder()
@@ -53,6 +69,29 @@ public class MectrisApiClient {
 
         var response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 202) throw new RuntimeException("Ingest failed (HTTP " + response.statusCode() + ")");
+    }
+
+    public void sendServerInfo(
+            String apiKey,
+            @NotNull UUID installationId,
+            String serverSoftware,
+            String serverVersion,
+            String jvmVersion,
+            String osInfo,
+            int pluginCount
+    ) throws Exception {
+        var payload = new ServerInfoPayload(serverSoftware, serverVersion, jvmVersion, osInfo, pluginCount);
+        var body = GSON.toJson(payload);
+
+        var request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl + "/api/v1/ingest/server-info"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .header("X-Installation-Id", installationId.toString())
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        http.send(request, HttpResponse.BodyHandlers.discarding());
     }
 
     public void sendPlayerSessions(String apiKey, @NotNull UUID installationId, List<PlayerSession> sessions) throws Exception {
@@ -87,5 +126,21 @@ public class MectrisApiClient {
 
     private record ClaimRequest(String claimToken, String installationId) {}
     public record ClaimResponse(String apiKey, String serverId, String installationId) {}
-    private record MetricsPayload(String timestamp, double tps, double mspt, int onlinePlayers, long usedMemory) {}
+    private record MetricsPayload(
+            String timestamp,
+            double tps,
+            double mspt,
+            int onlinePlayers,
+            long usedMemory,
+            Double cpuUsage,
+            long maxMemory,
+            int maxPlayers
+    ) {}
+    private record ServerInfoPayload(
+            String serverSoftware,
+            String serverVersion,
+            String jvmVersion,
+            String osInfo,
+            int pluginCount
+    ) {}
 }

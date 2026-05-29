@@ -8,6 +8,7 @@ import com.mectris.mectrispaper.config.MectrisConfig;
 import com.mectris.mectrispaper.metrics.MetricsCollector;
 import com.mectris.mectrispaper.metrics.MetricsScheduler;
 import com.mectris.mectrispaper.metrics.PlayerSessionTracker;
+import com.mectris.mectrispaper.metrics.ServerInfoCollector;
 import com.mectris.mectrispaper.storage.MectrisStorage;
 import com.mectris.mectrispaper.utils.RegisterUtils;
 import lombok.Getter;
@@ -137,6 +138,22 @@ public final class Mectris extends ZapperJavaPlugin {
         );
 
         getLogger().info("Metrics reporting started (every " + mectrisConfig.getMetricsInterval() + "s).");
+
+        scheduler.runTaskAsynchronously(() -> {
+            try {
+                var info = new ServerInfoCollector();
+                apiClient.sendServerInfo(
+                        apiKey, installationId,
+                        info.getServerSoftware(),
+                        info.getServerVersion(),
+                        info.getJvmVersion(),
+                        info.getOsInfo(),
+                        info.getPluginCount()
+                );
+            } catch (Exception e) {
+                getLogger().warning("Failed to send server info: " + e.getMessage());
+            }
+        });
     }
 
     @Override

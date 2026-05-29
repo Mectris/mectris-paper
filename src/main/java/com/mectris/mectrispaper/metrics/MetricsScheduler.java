@@ -36,7 +36,10 @@ public class MetricsScheduler implements Runnable {
                     collector.getTps(),
                     collector.getMspt(),
                     collector.getOnlinePlayers(),
-                    collector.getUsedMemory()
+                    collector.getUsedMemory(),
+                    collector.getMaxMemory(),
+                    collector.getCpuUsage(),
+                    collector.getMaxPlayers()
             );
         } catch (Exception e) {
             Mectris.getInstance().getLogger().warning("Failed to send metrics: " + e.getMessage());
