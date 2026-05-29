@@ -1,6 +1,7 @@
 package com.mectris.mectrispaper.api;
 
 import com.google.gson.Gson;
+import com.mectris.mectrispaper.metrics.PlayerSession;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
@@ -8,6 +9,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public class MectrisApiClient {
@@ -51,6 +53,25 @@ public class MectrisApiClient {
 
         var response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 202) throw new RuntimeException("Ingest failed (HTTP " + response.statusCode() + ")");
+    }
+
+    public void sendPlayerSessions(String apiKey, @NotNull UUID installationId, List<PlayerSession> sessions) throws Exception {
+        if (sessions.isEmpty()) return;
+
+        var body = GSON.toJson(sessions);
+
+        var request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl + "/api/v1/ingest/player-sessions"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .header("X-Installation-Id", installationId.toString())
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        var response = http.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 202) {
+            throw new RuntimeException("Player session ingest failed (HTTP " + response.statusCode() + ")");
+        }
     }
 
     public void sendDisconnect(String apiKey, UUID installationId) throws Exception {

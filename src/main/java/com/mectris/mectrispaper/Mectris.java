@@ -7,6 +7,7 @@ import com.mectris.mectrispaper.api.MectrisApiClient;
 import com.mectris.mectrispaper.config.MectrisConfig;
 import com.mectris.mectrispaper.metrics.MetricsCollector;
 import com.mectris.mectrispaper.metrics.MetricsScheduler;
+import com.mectris.mectrispaper.metrics.PlayerSessionTracker;
 import com.mectris.mectrispaper.storage.MectrisStorage;
 import com.mectris.mectrispaper.utils.RegisterUtils;
 import lombok.Getter;
@@ -24,6 +25,7 @@ public final class Mectris extends ZapperJavaPlugin {
     @Getter private MectrisConfig mectrisConfig;
     @Getter private MectrisStorage storage;
     @Getter private MectrisApiClient apiClient;
+    @Getter private PlayerSessionTracker sessionTracker;
     private MyScheduledTask metricsTask;
 
     @Override
@@ -45,6 +47,9 @@ public final class Mectris extends ZapperJavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+
+        sessionTracker = new PlayerSessionTracker();
+        getServer().getPluginManager().registerEvents(sessionTracker, this);
 
         RegisterUtils.registerCommands();
 
@@ -87,6 +92,11 @@ public final class Mectris extends ZapperJavaPlugin {
         try {
             var creds = storage.loadCredentials();
             if (creds.isPresent()) {
+                sessionTracker.flushActiveSessions();
+                var pending = sessionTracker.drainPending();
+                if (!pending.isEmpty()) {
+                    apiClient.sendPlayerSessions(creds.get().apiKey(), creds.get().installationId(), pending);
+                }
                 apiClient.sendDisconnect(creds.get().apiKey(), creds.get().installationId());
             }
         } catch (Exception ignored) {}
@@ -121,7 +131,7 @@ public final class Mectris extends ZapperJavaPlugin {
         var intervalTicks = (long) mectrisConfig.getMetricsInterval() * 20L;
 
         metricsTask = scheduler.runTaskTimerAsynchronously(
-                new MetricsScheduler(apiClient, new MetricsCollector(), apiKey, installationId),
+                new MetricsScheduler(apiClient, new MetricsCollector(), sessionTracker, apiKey, installationId),
                 intervalTicks,
                 intervalTicks
         );
@@ -132,6 +142,22 @@ public final class Mectris extends ZapperJavaPlugin {
     @Override
     public void onDisable() {
         if (metricsTask != null) metricsTask.cancel();
+
+        try {
+            if (sessionTracker != null && storage != null) {
+                var creds = storage.loadCredentials();
+                if (creds.isPresent()) {
+                    sessionTracker.flushActiveSessions();
+                    var pending = sessionTracker.drainPending();
+                    if (!pending.isEmpty()) {
+                        apiClient.sendPlayerSessions(creds.get().apiKey(), creds.get().installationId(), pending);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            getLogger().warning("Failed to flush player sessions on disable: " + e.getMessage());
+        }
+
         if (storage != null) storage.close();
     }
 }
