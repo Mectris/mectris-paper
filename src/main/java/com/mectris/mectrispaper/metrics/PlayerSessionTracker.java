@@ -16,25 +16,28 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class PlayerSessionTracker implements Listener {
 
-    private final ConcurrentHashMap<UUID, Instant> activeSessions = new ConcurrentHashMap<>();
+    private record Active(Instant joinedAt, String name) {}
+
+    private final ConcurrentHashMap<UUID, Active> activeSessions = new ConcurrentHashMap<>();
     private final Queue<PlayerSession> pendingSessions = new ConcurrentLinkedQueue<>();
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
-        activeSessions.put(event.getPlayer().getUniqueId(), Instant.now());
+        var player = event.getPlayer();
+        activeSessions.put(player.getUniqueId(), new Active(Instant.now(), player.getName()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent event) {
-        var joinTime = activeSessions.remove(event.getPlayer().getUniqueId());
-        if (joinTime != null) {
-            enqueueSession(event.getPlayer().getUniqueId(), joinTime);
+        var active = activeSessions.remove(event.getPlayer().getUniqueId());
+        if (active != null) {
+            enqueueSession(event.getPlayer().getUniqueId(), active);
         }
     }
 
     /** Flush all currently active sessions (call on plugin disable / disconnect). */
     public void flushActiveSessions() {
-        activeSessions.forEach((uuid, joinTime) -> enqueueSession(uuid, joinTime));
+        activeSessions.forEach(this::enqueueSession);
         activeSessions.clear();
     }
 
@@ -48,12 +51,13 @@ public class PlayerSessionTracker implements Listener {
         return batch;
     }
 
-    private void enqueueSession(UUID uuid, Instant joinTime) {
+    private void enqueueSession(UUID uuid, Active active) {
         var leftAt = Instant.now();
-        var duration = (int) (leftAt.getEpochSecond() - joinTime.getEpochSecond());
+        var duration = (int) (leftAt.getEpochSecond() - active.joinedAt().getEpochSecond());
         pendingSessions.add(new PlayerSession(
                 uuid.toString(),
-                joinTime.toString(),
+                active.name(),
+                active.joinedAt().toString(),
                 leftAt.toString(),
                 duration
         ));
