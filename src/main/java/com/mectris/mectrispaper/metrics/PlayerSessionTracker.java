@@ -1,5 +1,6 @@
 package com.mectris.mectrispaper.metrics;
 
+import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -20,6 +21,13 @@ public class PlayerSessionTracker implements Listener {
 
     private final ConcurrentHashMap<UUID, Active> activeSessions = new ConcurrentHashMap<>();
     private final Queue<PlayerSession> pendingSessions = new ConcurrentLinkedQueue<>();
+
+    /** Capture players who were already online when the plugin loaded (e.g. after /reload). */
+    public void seedOnlinePlayers() {
+        for (var player : Bukkit.getOnlinePlayers()) {
+            activeSessions.putIfAbsent(player.getUniqueId(), new Active(Instant.now(), player.getName()));
+        }
+    }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {

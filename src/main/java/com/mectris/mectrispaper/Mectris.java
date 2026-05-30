@@ -51,6 +51,7 @@ public final class Mectris extends ZapperJavaPlugin {
 
         sessionTracker = new PlayerSessionTracker();
         getServer().getPluginManager().registerEvents(sessionTracker, this);
+        sessionTracker.seedOnlinePlayers();
 
         RegisterUtils.registerCommands();
 
