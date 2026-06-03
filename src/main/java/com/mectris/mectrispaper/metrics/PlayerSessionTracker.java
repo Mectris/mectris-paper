@@ -20,12 +20,16 @@ public class PlayerSessionTracker implements Listener {
     private record Active(Instant joinedAt, String name) {}
 
     private final ConcurrentHashMap<UUID, Active> activeSessions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, String> countries = new ConcurrentHashMap<>();
     private final Queue<PlayerSession> pendingSessions = new ConcurrentLinkedQueue<>();
+
+    private final GeoIpResolver geoIp = new GeoIpResolver();
 
     /** Capture players who were already online when the plugin loaded (e.g. after /reload). */
     public void seedOnlinePlayers() {
         for (var player : Bukkit.getOnlinePlayers()) {
             activeSessions.putIfAbsent(player.getUniqueId(), new Active(Instant.now(), player.getName()));
+            trackCountry(player.getUniqueId(), player.getAddress());
         }
     }
 
@@ -33,6 +37,7 @@ public class PlayerSessionTracker implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         var player = event.getPlayer();
         activeSessions.put(player.getUniqueId(), new Active(Instant.now(), player.getName()));
+        trackCountry(player.getUniqueId(), player.getAddress());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -65,9 +70,20 @@ public class PlayerSessionTracker implements Listener {
         pendingSessions.add(new PlayerSession(
                 uuid.toString(),
                 active.name(),
+                countries.remove(uuid),
                 active.joinedAt().toString(),
                 leftAt.toString(),
                 duration
         ));
+    }
+
+    /** Kick off an async country lookup for the player's IP; stores the code once resolved. */
+    private void trackCountry(UUID uuid, java.net.InetSocketAddress socket) {
+        var address = socket != null ? socket.getAddress() : null;
+        geoIp.resolve(address, code -> {
+            if (code != null && activeSessions.containsKey(uuid)) {
+                countries.put(uuid, code);
+            }
+        });
     }
 }
