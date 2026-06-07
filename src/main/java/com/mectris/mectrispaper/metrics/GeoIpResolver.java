@@ -24,7 +24,9 @@ public class GeoIpResolver {
 
     private static final Gson GSON = new Gson();
 
-    private final HttpClient http = HttpClient.newHttpClient();
+    private final HttpClient http = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(5))
+            .build();
     // IP -> country code; empty string marks a resolved-but-unknown IP (negative cache).
     private final ConcurrentHashMap<String, String> cache = new ConcurrentHashMap<>();
 
@@ -47,6 +49,7 @@ public class GeoIpResolver {
 
         var request = HttpRequest.newBuilder()
                 .uri(URI.create("http://ip-api.com/json/" + ip + "?fields=status,countryCode"))
+                .timeout(java.time.Duration.ofSeconds(8))
                 .GET()
                 .build();
 

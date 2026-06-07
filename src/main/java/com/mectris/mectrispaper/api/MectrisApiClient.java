@@ -8,6 +8,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -15,13 +16,18 @@ import java.util.UUID;
 public class MectrisApiClient {
 
     private static final Gson GSON = new Gson();
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
 
     private final HttpClient http;
     private final String apiUrl;
 
     public MectrisApiClient(String apiUrl) {
         this.apiUrl = apiUrl;
-        this.http = HttpClient.newHttpClient();
+        // Bounded timeouts so a slow/hung backend never blocks the calling thread
+        // indefinitely — important because disconnect()/onDisable() send on the main thread.
+        this.http = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
     }
 
     public ClaimResponse completeClaim(String claimToken, UUID installationId) throws Exception {
@@ -29,6 +35,7 @@ public class MectrisApiClient {
 
         var request = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl + "/api/v1/claim"))
+                .timeout(REQUEST_TIMEOUT)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
@@ -61,6 +68,7 @@ public class MectrisApiClient {
 
         var request = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl + "/api/v1/ingest/metrics"))
+                .timeout(REQUEST_TIMEOUT)
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
                 .header("X-Installation-Id", installationId.toString())
@@ -85,6 +93,7 @@ public class MectrisApiClient {
 
         var request = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl + "/api/v1/ingest/server-info"))
+                .timeout(REQUEST_TIMEOUT)
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
                 .header("X-Installation-Id", installationId.toString())
@@ -101,6 +110,7 @@ public class MectrisApiClient {
 
         var request = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl + "/api/v1/ingest/player-sessions"))
+                .timeout(REQUEST_TIMEOUT)
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
                 .header("X-Installation-Id", installationId.toString())
@@ -116,6 +126,7 @@ public class MectrisApiClient {
     public void sendDisconnect(String apiKey, UUID installationId) throws Exception {
         var request = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl + "/api/v1/ingest/disconnect"))
+                .timeout(REQUEST_TIMEOUT)
                 .header("Authorization", "Bearer " + apiKey)
                 .header("X-Installation-Id", installationId.toString())
                 .POST(HttpRequest.BodyPublishers.noBody())
