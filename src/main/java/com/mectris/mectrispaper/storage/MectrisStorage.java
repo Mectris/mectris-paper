@@ -2,6 +2,9 @@ package com.mectris.mectrispaper.storage;
 
 import com.google.gson.Gson;
 import com.mectris.mectrispaper.Mectris;
+import com.mectris.mectrispaper.models.Credentials;
+import com.mectris.mectrispaper.models.CredentialsData;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileReader;
@@ -28,11 +31,12 @@ public class MectrisStorage {
             if (data == null || data.apiKey() == null || data.serverId() == null || data.installationId() == null) {
                 return Optional.empty();
             }
+
             return Optional.of(new Credentials(data.apiKey(), UUID.fromString(data.serverId()), UUID.fromString(data.installationId())));
         }
     }
 
-    public void saveCredentials(String apiKey, UUID serverId, UUID installationId) throws IOException {
+    public void saveCredentials(String apiKey, @NotNull UUID serverId, @NotNull UUID installationId) throws IOException {
         try (var writer = new FileWriter(file)) {
             GSON.toJson(new CredentialsData(apiKey, serverId.toString(), installationId.toString()), writer);
         }
@@ -43,8 +47,4 @@ public class MectrisStorage {
     }
 
     public void close() {}
-
-    public record Credentials(String apiKey, UUID serverId, UUID installationId) {}
-
-    private record CredentialsData(String apiKey, String serverId, String installationId) {}
 }

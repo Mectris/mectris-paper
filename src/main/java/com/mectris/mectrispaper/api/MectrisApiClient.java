@@ -1,7 +1,12 @@
 package com.mectris.mectrispaper.api;
 
 import com.google.gson.Gson;
-import com.mectris.mectrispaper.metrics.PlayerSession;
+import com.mectris.mectrispaper.models.PlayerSession;
+import com.mectris.mectrispaper.models.api.ClaimRequest;
+import com.mectris.mectrispaper.models.api.ClaimResponse;
+import com.mectris.mectrispaper.models.api.MetricsPayload;
+import com.mectris.mectrispaper.models.api.ServerInfoPayload;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
@@ -15,48 +20,34 @@ import java.util.UUID;
 
 public class MectrisApiClient {
 
+    public static final String BASE_URL = "https://api.mectris.com";
+
     private static final Gson GSON = new Gson();
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
+    private static final String JSON = "application/json";
 
     private final HttpClient http;
-    private final String apiUrl;
 
-    public MectrisApiClient(String apiUrl) {
-        this.apiUrl = apiUrl;
-        // Bounded timeouts so a slow/hung backend never blocks the calling thread
-        // indefinitely — important because disconnect()/onDisable() send on the main thread.
+    public MectrisApiClient() {
         this.http = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
     }
 
-    public ClaimResponse completeClaim(String claimToken, UUID installationId) throws Exception {
-        var body = GSON.toJson(new ClaimRequest(claimToken, installationId.toString()));
-
-        var request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl + "/api/v1/claim"))
-                .timeout(REQUEST_TIMEOUT)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
+    public ClaimResponse completeClaim(String claimToken, @NotNull UUID installationId) throws Exception {
+        var request = jsonRequest("/api/v1/claim")
+                .POST(jsonBody(new ClaimRequest(claimToken, installationId.toString())))
                 .build();
 
         var response = http.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 200) throw new RuntimeException("Claim failed (HTTP " + response.statusCode() + "): " + response.body());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Claim failed (HTTP " + response.statusCode() + "): " + response.body());
+        }
 
         return GSON.fromJson(response.body(), ClaimResponse.class);
     }
 
-    public void sendMetrics(
-            String apiKey,
-            @NotNull UUID installationId,
-            double tps,
-            double mspt,
-            int onlinePlayers,
-            long usedMemory,
-            long maxMemory,
-            double cpuUsage,
-            int maxPlayers
-    ) throws Exception {
+    public void sendMetrics(String apiKey, @NotNull UUID installationId, double tps, double mspt, int onlinePlayers, long usedMemory, long maxMemory, double cpuUsage, int maxPlayers) throws Exception {
         var payload = new MetricsPayload(
                 Instant.now().toString(),
                 tps, mspt, onlinePlayers, usedMemory,
@@ -64,94 +55,72 @@ public class MectrisApiClient {
                 maxMemory,
                 maxPlayers
         );
-        var body = GSON.toJson(payload);
 
-        var request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl + "/api/v1/ingest/metrics"))
-                .timeout(REQUEST_TIMEOUT)
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)
-                .header("X-Installation-Id", installationId.toString())
-                .POST(HttpRequest.BodyPublishers.ofString(body))
+        var request = authedJsonRequest("/api/v1/ingest/metrics", apiKey, installationId)
+                .POST(jsonBody(payload))
                 .build();
 
-        var response = http.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 202) throw new RuntimeException("Ingest failed (HTTP " + response.statusCode() + ")");
+        sendExpecting(request, 202, "Ingest");
     }
 
-    public void sendServerInfo(
-            String apiKey,
-            @NotNull UUID installationId,
-            String serverSoftware,
-            String serverVersion,
-            String jvmVersion,
-            String osInfo,
-            int pluginCount
-    ) throws Exception {
+    public void sendServerInfo(String apiKey, @NotNull UUID installationId, String serverSoftware, String serverVersion, String jvmVersion, String osInfo, int pluginCount) throws Exception {
         var payload = new ServerInfoPayload(serverSoftware, serverVersion, jvmVersion, osInfo, pluginCount);
-        var body = GSON.toJson(payload);
-
-        var request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl + "/api/v1/ingest/server-info"))
-                .timeout(REQUEST_TIMEOUT)
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)
-                .header("X-Installation-Id", installationId.toString())
-                .POST(HttpRequest.BodyPublishers.ofString(body))
+        var request = authedJsonRequest("/api/v1/ingest/server-info", apiKey, installationId)
+                .POST(jsonBody(payload))
                 .build();
 
         http.send(request, HttpResponse.BodyHandlers.discarding());
     }
 
-    public void sendPlayerSessions(String apiKey, @NotNull UUID installationId, List<PlayerSession> sessions) throws Exception {
+    public void sendPlayerSessions(String apiKey, @NotNull UUID installationId, @NotNull List<PlayerSession> sessions) throws Exception {
         if (sessions.isEmpty()) return;
 
-        var body = GSON.toJson(sessions);
-
-        var request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl + "/api/v1/ingest/player-sessions"))
-                .timeout(REQUEST_TIMEOUT)
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)
-                .header("X-Installation-Id", installationId.toString())
-                .POST(HttpRequest.BodyPublishers.ofString(body))
+        var request = authedJsonRequest("/api/v1/ingest/player-sessions", apiKey, installationId)
+                .POST(jsonBody(sessions))
                 .build();
 
-        var response = http.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 202) {
-            throw new RuntimeException("Player session ingest failed (HTTP " + response.statusCode() + ")");
-        }
+        sendExpecting(request, 202, "Player session ingest");
     }
 
     public void sendDisconnect(String apiKey, UUID installationId) throws Exception {
-        var request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl + "/api/v1/ingest/disconnect"))
-                .timeout(REQUEST_TIMEOUT)
-                .header("Authorization", "Bearer " + apiKey)
-                .header("X-Installation-Id", installationId.toString())
+        var request = authedRequest("/api/v1/ingest/disconnect", apiKey, installationId)
                 .POST(HttpRequest.BodyPublishers.noBody())
                 .build();
 
         http.send(request, HttpResponse.BodyHandlers.discarding());
     }
 
-    private record ClaimRequest(String claimToken, String installationId) {}
-    public record ClaimResponse(String apiKey, String serverId, String installationId) {}
-    private record MetricsPayload(
-            String timestamp,
-            double tps,
-            double mspt,
-            int onlinePlayers,
-            long usedMemory,
-            Double cpuUsage,
-            long maxMemory,
-            int maxPlayers
-    ) {}
-    private record ServerInfoPayload(
-            String serverSoftware,
-            String serverVersion,
-            String jvmVersion,
-            String osInfo,
-            int pluginCount
-    ) {}
+    private HttpRequest.Builder baseRequest(String path) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + path))
+                .timeout(REQUEST_TIMEOUT);
+    }
+
+    private HttpRequest.Builder jsonRequest(String path) {
+        return baseRequest(path).header("Content-Type", JSON);
+    }
+
+    private HttpRequest.Builder authedRequest(String path, String apiKey, @NotNull UUID installationId) {
+        return baseRequest(path)
+                .header("Authorization", "Bearer " + apiKey)
+                .header("X-Installation-Id", installationId.toString());
+    }
+
+    private HttpRequest.Builder authedJsonRequest(String path, String apiKey, UUID installationId) {
+        return authedRequest(path, apiKey, installationId).header("Content-Type", JSON);
+    }
+
+    @NotNull
+    @Contract("_ -> new")
+    private static HttpRequest.BodyPublisher jsonBody(Object payload) {
+        return HttpRequest.BodyPublishers.ofString(GSON.toJson(payload));
+    }
+
+    private void sendExpecting(HttpRequest request, int expectedStatus, String action) throws Exception {
+        var response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != expectedStatus) {
+            throw new RuntimeException(action + " failed (HTTP " + response.statusCode() + ")");
+        }
+    }
 }
