@@ -1,0 +1,65 @@
+prefix: '&#5EEAD4▎ &#FFFFFFMectris &#475569› &r'
+
+messages:
+  help:
+    - '&#5EEAD4▎ &#FFFFFF&lMectris &#334155┃ &#64748BCommands'
+    - ' '
+    - ' &#334155┃ &#5EEAD4/mectris status &#475569› &#94A3B8Connection & config info'
+    - ' &#334155┃ &#5EEAD4/mectris metrics &#475569› &#94A3B8Live server metrics'
+    - ' &#334155┃ &#5EEAD4/mectris claim <token> &#475569› &#94A3B8Connect with a token'
+    - ' &#334155┃ &#5EEAD4/mectris disconnect &#475569› &#94A3B8Clear credentials'
+    - ' &#334155┃ &#5EEAD4/mectris reload &#475569› &#94A3B8Reload & restart metrics'
+
+  status-connected:
+    - '&#5EEAD4▎ &#FFFFFF&lMectris &#334155┃ &#64748BStatus'
+    - ' '
+    - ' &#334155┃ &#94A3B8Connection &#475569› &#4ADE80● &#E2E8F0Connected'
+    - ' &#334155┃ &#94A3B8API URL &#475569› &#E2E8F0{url}'
+    - ' &#334155┃ &#94A3B8Interval &#475569› &#E2E8F0{interval}&#64748Bs'
+    - ' &#334155┃ &#94A3B8Server ID &#475569› &#E2E8F0{server_id}'
+    - ' &#334155┃ &#94A3B8Installation &#475569› &#E2E8F0{installation_id}'
+
+  status-disconnected:
+    - '&#5EEAD4▎ &#FFFFFF&lMectris &#334155┃ &#64748BStatus'
+    - ' '
+    - ' &#334155┃ &#94A3B8Connection &#475569› &#F87171● &#E2E8F0Not connected'
+    - ' &#334155┃ &#94A3B8API URL &#475569› &#E2E8F0{url}'
+    - ' &#334155┃ &#94A3B8Interval &#475569› &#E2E8F0{interval}&#64748Bs'
+    - ' '
+    - ' &#475569› &#94A3B8Run &#5EEAD4/mectris claim <token> &#94A3B8to connect'
+
+  status-error: '&#F87171● &#94A3B8Failed to read credentials: &#E2E8F0{error}'
+
+  metrics:
+    - '&#5EEAD4▎ &#FFFFFF&lMectris &#334155┃ &#64748BLive Metrics'
+    - ' '
+    - ' &#38BDF8&lPerformance'
+    - ' &#334155┃ &#94A3B8TPS &#475569› &#E2E8F0{tps_1m} &#475569/ &#E2E8F0{tps_5m} &#475569/ &#E2E8F0{tps_15m}  &#64748B1m·5m·15m'
+    - ' &#334155┃ &#94A3B8MSPT &#475569› &#E2E8F0{mspt}&#64748Bms'
+    - ' &#334155┃ &#94A3B8CPU &#475569› &#E2E8F0{cpu}&#64748B%'
+    - ' &#334155┃ &#94A3B8Threads &#475569› &#E2E8F0{threads}'
+    - ' '
+    - ' &#38BDF8&lResources'
+    - ' &#334155┃ &#94A3B8Memory &#475569› &#E2E8F0{mem_used}&#64748B/&#E2E8F0{mem_max} &#64748BMB  &#475569(&#E2E8F0{mem_percent}&#64748B%&#475569)'
+    - ' &#334155┃ &#94A3B8Players &#475569› &#E2E8F0{online}&#64748B/&#E2E8F0{max_players}'
+    - ' '
+    - ' &#38BDF8&lWorld'
+    - ' &#334155┃ &#94A3B8Worlds &#475569› &#E2E8F0{worlds}'
+    - ' &#334155┃ &#94A3B8Chunks &#475569› &#E2E8F0{chunks}'
+    - ' &#334155┃ &#94A3B8Entities &#475569› &#E2E8F0{entities}'
+    - ' '
+    - ' &#38BDF8&lServer'
+    - ' &#334155┃ &#94A3B8Software &#475569› &#E2E8F0{software} &#64748B{version}'
+    - ' &#334155┃ &#94A3B8Uptime &#475569› &#E2E8F0{uptime}'
+
+  claim: '&#5EEAD4● &#94A3B8Claiming, please wait...'
+  claim-success: '&#4ADE80● &#94A3B8Connected! &#475569Server ID: &#E2E8F0{server_id}'
+  claim-failed: '&#F87171● &#94A3B8Claim failed: &#E2E8F0{error}'
+
+  disconnect: '&#4ADE80● &#94A3B8Disconnected. Credentials cleared.'
+  disconnect-failed: '&#F87171● &#94A3B8Failed to disconnect: &#E2E8F0{error}'
+
+  reload: '&#4ADE80● &#94A3B8Config reloaded and metrics restarted.'
+  reload-failed: '&#F87171● &#94A3B8Reload failed: &#E2E8F0{error}'
+
+version: 1

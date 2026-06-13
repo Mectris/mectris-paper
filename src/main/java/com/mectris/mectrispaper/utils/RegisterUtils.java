@@ -1,7 +1,6 @@
 package com.mectris.mectrispaper.utils;
 
 import com.mectris.mectrispaper.Mectris;
-import com.mectris.mectrispaper.collector.PlayerSessionCollector;
 import com.mectris.mectrispaper.commands.MectrisCommand;
 import lombok.experimental.UtilityClass;
 import revxrsal.commands.bukkit.BukkitLamp;
@@ -17,6 +16,6 @@ public class RegisterUtils {
     }
 
     public void registerListeners() {
-        plugin.getServer().getPluginManager().registerEvents(new PlayerSessionCollector(), plugin);
+        plugin.getServer().getPluginManager().registerEvents(plugin.getSessionTracker(), plugin);
     }
 }
