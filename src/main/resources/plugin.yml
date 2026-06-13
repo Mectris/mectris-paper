@@ -2,14 +2,4 @@ name: mectris-paper
 version: '1.0.0'
 main: com.mectris.mectrispaper.Mectris
 api-version: '1.21'
-
-commands:
-  mectris:
-    description: Mectris dashboard plugin management
-    usage: /mectris <status|metrics|claim|disconnect|reload>
-    permission: mectris.admin
-
-permissions:
-  mectris.admin:
-    description: Access to all Mectris commands
-    default: op
+folia-supported: true

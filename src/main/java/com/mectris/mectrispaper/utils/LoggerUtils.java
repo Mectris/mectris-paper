@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 @UtilityClass
 public class LoggerUtils {
-    private final Logger logger = LogManager.getLogger("McPlayerShop");
+    private final Logger logger = LogManager.getLogger("Mectris");
 
     public void info(@NotNull String msg, @NotNull Object... objs) {
         logger.info(msg, objs);
